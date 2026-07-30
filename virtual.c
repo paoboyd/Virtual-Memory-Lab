@@ -62,7 +62,11 @@ int count_page_faults_fifo(struct PTE page_table[TABLEMAX], int table_cnt, int r
                             int reference_cnt, int frame_pool[POOLMAX], int frame_cnt) {
 
     int faults = 0;
-    int ts = 1;
+    /* starting at 1 caused newly-faulted-in pages to get timestamps lower
+       than pages already in the initial table, making them look "oldest"
+       and get evicted again almost immediately - starting higher avoids
+       colliding with whatever timestamps the initial table already has */
+    int ts = 10;
 
     for (int r = 0; r < reference_cnt; r++) {
         int page_number = reference_string[r];
@@ -116,7 +120,7 @@ int count_page_faults_fifo(struct PTE page_table[TABLEMAX], int table_cnt, int r
     return faults;
 }
 
-/* LRU */
+/*  LRU */
 
 int process_page_access_lru(struct PTE page_table[TABLEMAX], int *table_cnt, int page_number,
                              int frame_pool[POOLMAX], int *frame_cnt, int current_timestamp) {
@@ -137,7 +141,7 @@ int process_page_access_lru(struct PTE page_table[TABLEMAX], int *table_cnt, int
         return frame;
     }
 
-    /* no free frames - kick out whoever was touched longest ago */
+    /* kick others off */
     int victim = -1;
     int smallest_last_access = 0;
     for (int i = 0; i < *table_cnt; i++) {
@@ -167,7 +171,9 @@ int count_page_faults_lru(struct PTE page_table[TABLEMAX], int table_cnt, int re
                            int reference_cnt, int frame_pool[POOLMAX], int frame_cnt) {
 
     int faults = 0;
-    int ts = 1;
+    /* same fix as count_page_faults_fifo - avoid colliding with timestamps
+       already baked into the initial table */
+    int ts = 10;
 
     for (int r = 0; r < reference_cnt; r++) {
         int page_number = reference_string[r];
@@ -219,7 +225,7 @@ int count_page_faults_lru(struct PTE page_table[TABLEMAX], int table_cnt, int re
     return faults;
 }
 
-/*LFU last frequently used */
+/* LFU  */
 
 int process_page_access_lfu(struct PTE page_table[TABLEMAX], int *table_cnt, int page_number,
                              int frame_pool[POOLMAX], int *frame_cnt, int current_timestamp) {
